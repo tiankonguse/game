@@ -1,0 +1,56 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
+#game-board {
+    position: relative;
+    background: rgb(101, 101, 131);
+}
+
+.sokoban-wall-out {
+    width: 50px;
+    height: 50px;
+    background: #666;
+    float: left;
+}
+.sokoban-wall {
+    width: 48px;
+    height: 48px;
+    background: #B6AFAF;
+    border: 1px solid #e5e5e5;
+    float: left;
+}
+
+.sokoban-wall-in{
+    width: 50px;
+    height: 50px;
+    background: blue;
+    float: left; 
+}
+
+
+
+.sokoban-wall-to{
+    width: 50px;
+    height: 50px;
+    background: red;
+    -moz-border-radius: 25px;
+    -webkit-border-radius: 25px;
+    border-radius: 25px;
+    float: left;
+}
+.sokoban-box {
+    width: 50px;
+    height: 50px;
+    background: url(../img/box.png) no-repeat;
+    position: absolute;
+}
+
+
+.sokoban-person {
+    width: 50px;
+    height: 50px;
+    background: url(../img/person.png) no-repeat;
+    position: absolute;
+}
