@@ -20,6 +20,7 @@ require BASE_INC . 'head.inc.php';
     </header>
     <section>
         <div class="container">
+            <div style="text-align: center;">数字5刷新</div>
             <div id="game-board" class="clearfix"></div>
         </div>
     </section>

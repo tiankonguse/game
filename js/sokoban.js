@@ -19,7 +19,8 @@ jQuery(function() {
 	    "sokoban-wall" : 2,
 	    "sokoban-wall-to" : 3,
 	    "sokoban-box" : 4,
-	    "sokoban-person" : 5
+	    "sokoban-person" : 5,
+	    "sokoban-ok" : 6
 	},
 	sokobanVal : {
 	    0 : 1,
@@ -27,16 +28,13 @@ jQuery(function() {
 	    2 : 15,
 	    3 : 2,
 	    4 : 4,
-	    5 : 12
+	    5 : 12,
+	    6 : 6
 	},
 	move : function(name, from, to) {
 	},
 	sokobanMap : null,
-	init : function(gameBoard) {
-	    var that = this;
-	    that.gameBoard = gameBoard;
-	    that.createMap(that.lev);
-	},
+
 	getClass : function(elem) {
 	    return this.className[elem];
 	},
@@ -47,35 +45,49 @@ jQuery(function() {
 	    return point.y * this.width + point.x;
 	},
 	nowJson : "",
+	boxs : null,
 	lev : 0,
 	width : 0,
-	person : null,
 	height : 0,
+	person : null,
 	event : {
 	    37 : function(that) {
 		that.person.css('background-position', '-150px 0');
 		that.movePerson({
-		    x : -1
+		    x : -1,
+		    y : 0
 		});
 	    },
 	    38 : function(that) {
 		that.person.css('background-position', '0 0');
 		that.movePerson({
+		    x : 0,
 		    y : -1
 		});
 	    },
 	    39 : function(that) {
 		that.person.css('background-position', '-50px 0');
 		that.movePerson({
-		    x : 1
+		    x : 1,
+		    y : 0
 		});
 	    },
 	    40 : function(that) {
 		that.person.css('background-position', '-100px 0');
 		that.movePerson({
+		    x : 0,
 		    y : 1
 		});
+	    },
+	    53 : function(that) {
+		that.createMap(that.lev);
 	    }
+	},
+	init : function(gameBoard) {
+	    var that = this;
+	    that.gameBoard = gameBoard;
+	    that.createMap(that.lev);
+	    that.bindPerson();
 	},
 	createMap : function(lev) {
 	    var that = this;
@@ -83,7 +95,7 @@ jQuery(function() {
 	    that.lev = lev % that.gk.length;
 	    that.gameBoard.empty();
 	    that.setTitle('第' + (lev + 1) + '关');
-	    that.nowJson = that.gk[lev];
+	    that.nowJson = that.gk[that.lev];
 	    that.width = that.nowJson.width;
 	    that.height = that.nowJson.height;
 	    that.sokobanMap = [];
@@ -106,15 +118,21 @@ jQuery(function() {
 	},
 	createBox : function() {
 	    var that = this;
+	    that.boxs = [];
 	    $.each(that.nowJson.box, $.proxy(function(i, elem) {
-		var oBox = $('<div class="'
+		var box = $('<div class="'
 			+ that.getClass(that.sokobanName["sokoban-box"])
 			+ '"></div>');
-		that.sokobanMap[that.getLinePos(elem)] |= that
+		box.point = {
+		    x : elem.x,
+		    y : elem.y
+		};
+		that.sokobanMap[that.getLinePos(box.point)] |= that
 			.getVal(that.sokobanName["sokoban-box"]);
-		oBox.css('left', elem.x * that.baseWidth);
-		oBox.css('top', elem.y * that.baseWidth);
-		that.gameBoard.append(oBox);
+		box.css('left', box.point.x * that.baseWidth);
+		box.css('top', box.point.y * that.baseWidth);
+		that.boxs.push(box);
+		that.gameBoard.append(box);
 	    }, that));
 	},
 	createPerson : function() {
@@ -122,204 +140,121 @@ jQuery(function() {
 	    var person = that.person = $('<div class="'
 		    + that.getClass(that.sokobanName["sokoban-person"])
 		    + '"></div>');
-	    person.point = that.nowJson.person;
+	    person.point = {
+		x : that.nowJson.person.x,
+		y : that.nowJson.person.y
+	    };
 
 	    that.sokobanMap[that.getLinePos(person.point)] |= that
 		    .getVal(that.sokobanName["sokoban-person"]);
 	    person.css('left', person.point.x * that.baseWidth);
 	    person.css('top', person.point.y * that.baseWidth);
 
-	    person.data('x', person.point.x);
-	    person.data('y', person.point.y);
-
 	    that.gameBoard.append(person);
-	    that.bindPerson();
 	},
+	lock : false,
 	bindPerson : function() {
 	    var that = this;
 	    $(document).keydown($.proxy(function(ev) {
-		if (that.event[ev.which]) {
-		    that.event[ev.which](that);
-		    ev.preventDefault();
+		if (!that.lock) {
+		    that.lock = true;
+		    if (that.event[ev.which]) {
+			that.event[ev.which](that);
+			ev.preventDefault();
+		    }
+		    that.lock = false;
 		}
+
 	    }, that));
+	},
+	back : function(point, opt) {
+	    point.x -= opt.x;
+	    point.y -= opt.y;
+	    return point;
+	},
+	run : function(point, opt) {
+	    point.x += opt.x;
+	    point.y += opt.y;
+	    return point;
+	},
+	getBox : function(point) {
+	    var that = this;
+	    var i, boxNum;
+	    var boxs = that.boxs;
+	    boxNum = boxs.length;
+	    for (i = 0; i < boxNum; i++) {
+		if (boxs[i].point.x == point.x && boxs[i].point.y == point.y) {
+		    return boxs[i];
+		}
+	    }
+	    return null;
+	},
+	move : function(obj, opt, objVal) {
+	    var that = this;
+	    var nowPos = that.getLinePos(obj.point);
+	    var nextPos = that.getLinePos(that.run(obj.point, opt));
+	    that.sokobanMap[nowPos] ^= objVal;
+	    that.sokobanMap[nextPos] ^= objVal;
+	    obj.css('left', obj.point.x * that.baseWidth);
+	    obj.css('top', obj.point.y * that.baseWidth);
 	},
 	movePerson : function(opt) {
 	    var that = this;
 	    var person = that.person;
-	    var point = person.point;
 
-	    opt.x || (opt.x = 0);
-	    opt.y || (opt.y = 0);
+	    var wallVal = that.getVal(that.sokobanName["sokoban-wall"]);
+	    var boxVal = that.getVal(that.sokobanName["sokoban-box"]);
+	    var personVal = that.getVal(that.sokobanName["sokoban-person"]);
 
-	    var xValue = opt.x || 0;
-	    var yValue = opt.y || 0;
+	    var nowPoint = person.point;
+	    var nowPos = that.getLinePos(nowPoint);
 
-	    if (that.sokobanMap[that.getLinePos({
-		x : point.x + opt.x,
-		y : point.y + opt.y
-	    })] != that.getVal(that.sokobanName["sokoban-wall"])) {
-		console.log("try");
-	    }else{
+	    var nextPoint = {
+		x : nowPoint.x + opt.x,
+		y : nowPoint.y + opt.y
+	    };
+	    var nextVal = that.sokobanMap[that.getLinePos(nextPoint)];
+
+	    if (nextVal != wallVal) {
+		if ((nextVal & personVal) == 0) {
+		    that.move(person, opt, personVal);
+		} else {
+
+		    var nextTwoVal = that.sokobanMap[that.getLinePos({
+			x : nowPoint.x + opt.x * 2,
+			y : nowPoint.y + opt.y * 2
+		    })];
+
+		    if ((nextTwoVal & boxVal) == 0) {
+			var box = that.getBox(nextPoint);
+			that.move(box, opt, boxVal);
+			that.move(person, opt, personVal);
+			console.log("try");
+			this.nextShow();
+		    } else {
+			console.log("wall or box");
+		    }
+		}
+
+	    } else {
 		console.log("wall");
 	    }
-
-	    if (this.nowJson.map[(person.data('y') + yValue) * this.width
-		    + (person.data('x') + xValue)] != 2) {
-
-		person.data('x', person.data('x') + xValue);
-		person.data('y', person.data('y') + yValue);
-
-		person.css('left', person.data('x') * 50);
-		person.css('top', person.data('y') * 50);
-
-		$('.' + this.getClass(4))
-			.each(
-				$
-					.proxy(
-						function(i, elem) {
-
-						    if (this
-							    .pz(person, $(elem))
-							    && this.nowJson.map[(person
-								    .data('y') + yValue)
-								    * Math
-									    .sqrt(this.nowJson.map.length)
-								    + (person
-									    .data('x') + xValue)] != 2) {
-
-							$(elem)
-								.css(
-									'left',
-									(person
-										.data('x') + xValue) * 50);
-							$(elem)
-								.css(
-									'top',
-									(person
-										.data('y') + yValue) * 50);
-
-							$(
-								'.'
-									+ this
-										.getClass(4))
-								.each(
-									$
-										.proxy(
-											function(
-												j,
-												elem2) {
-
-											    if (this
-												    .pz(
-													    $(elem),
-													    $(elem2))
-												    && elem != elem2) {
-
-												$(
-													elem)
-													.css(
-														'left',
-														person
-															.data('x') * 50);
-												$(
-													elem)
-													.css(
-														'top',
-														person
-															.data('y') * 50);
-
-												person
-													.data(
-														'x',
-														person
-															.data('x')
-															- xValue);
-												person
-													.data(
-														'y',
-														person
-															.data('y')
-															- yValue);
-
-												person
-													.css(
-														'left',
-														person
-															.data('x') * 50);
-												person
-													.css(
-														'top',
-														person
-															.data('y') * 50);
-
-											    }
-
-											},
-											this));
-
-						    } else if (this.pz(person,
-							    $(elem))) {
-
-							person.data('x', person
-								.data('x')
-								- xValue);
-							person.data('y', person
-								.data('y')
-								- yValue);
-
-							person
-								.css(
-									'left',
-									person
-										.data('x') * 50);
-							person
-								.css(
-									'top',
-									person
-										.data('y') * 50);
-
-						    }
-
-						}, this));
-
-	    }
-
-	    this.nextShow();
-
+	    return;
 	},
 	nextShow : function() { // 下一关
-	    var iNum = 0;
-	    $('.' + this.getClass(this.sokobanName["sokoban-box"]))
-		    .each(
-			    $
-				    .proxy(
-					    function(i, elem) {
+	    var that = this;
+	    var i, boxNum, pos;
+	    var boxs = that.boxs;
+	    var ok = that.getVal(that.sokobanName["sokoban-ok"]);
+	    boxNum = boxs.length;
+	    for (i = 0; i < boxNum; i++) {
+		pos = that.getLinePos(boxs[i].point);
+		if (that.sokobanMap[pos] != ok) {
+		    return;
+		}
 
-						$(
-							'.'
-								+ this
-									.getClass(this.sokobanName["sokoban-wall-to"]))
-							.each(
-								$
-									.proxy(
-										function(
-											j,
-											elem2) {
-										    if (this
-											    .pz(
-												    $(elem),
-												    $(elem2))) {
-											iNum++;
-										    }
-										},
-										this));
-
-					    }, this));
-	    if (iNum == this.nowJson.box.length) {
-		this.createMap(this.lev + 1);
 	    }
-
+	    this.createMap(this.lev + 1);
 	},
 	gk : [ // 关卡的数据
 		{
@@ -353,7 +288,7 @@ jQuery(function() {
 			    0, 0, 2, 0, 0, 2, 1, 1, 1, 1, 1, 2, 0, 0, 0, 0, 0,
 			    2, 1, 2, 2, 2, 2, 2, 0, 0, 2, 0, 0, 2, 1, 3, 3, 3,
 			    2, 2, 2, 0, 2, 0, 0, 2, 2, 3, 0, 0, 2, 0, 0, 0, 0,
-			    2, 0, 0, 2, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3,
+			    2, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 3,
 			    0, 0, 2, 0, 0, 0, 0, 2, 0, 0, 2, 3, 3, 3, 2, 2, 2,
 			    0, 2, 0, 0, 2, 2, 2, 2, 2, 2, 2, 0, 0, 0, 0, 0, 2,
 			    1, 1, 1, 1, 1, 2, 0, 0, 2, 0, 0, 2, 1, 1, 1, 1, 1,
@@ -389,25 +324,7 @@ jQuery(function() {
 		    },
 		    width : 12,
 		    height : 12
-		} ],
-	pz : function(obj1, obj2) { // 碰撞检测
-	    var L1 = obj1.offset().left;
-	    var R1 = obj1.offset().left + obj1.width();
-	    var T1 = obj1.offset().top;
-	    var B1 = obj1.offset().top + obj1.height();
-
-	    var L2 = obj2.offset().left;
-	    var R2 = obj2.offset().left + obj2.width();
-	    var T2 = obj2.offset().top;
-	    var B2 = obj2.offset().top + obj2.height();
-
-	    if (R1 <= L2 || L1 >= R2 || T1 >= B2 || B1 <= T2) {
-		return false;
-	    } else {
-		return true;
-	    }
-
-	}
+		} ]
     };
     SokobanGame.init($('#game-board'));
 
