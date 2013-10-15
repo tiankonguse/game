@@ -5,14 +5,6 @@ jQuery(function() {
 	setTitle : function(val) {
 	    document.title = val;
 	},
-	className : {
-	    0 : "sokoban-wall-in",
-	    1 : "sokoban-wall-out",
-	    2 : "sokoban-wall",
-	    3 : "sokoban-wall-to",
-	    4 : "sokoban-box",
-	    5 : "sokoban-person"
-	},
 	sokobanName : {
 	    "sokoban-wall-in" : 0,
 	    "sokoban-wall-out" : 1,
@@ -21,6 +13,17 @@ jQuery(function() {
 	    "sokoban-box" : 4,
 	    "sokoban-person" : 5,
 	    "sokoban-ok" : 6
+	},
+	className : {
+	    0 : "sokoban-wall-in",
+	    1 : "sokoban-wall-out",
+	    2 : "sokoban-wall",
+	    3 : "sokoban-wall-to",
+	    4 : "sokoban-box",
+	    5 : "sokoban-person"
+	},
+	getClass : function(elem) {
+	    return this.className[elem];
 	},
 	sokobanVal : {
 	    0 : 1,
@@ -31,25 +34,22 @@ jQuery(function() {
 	    5 : 12,
 	    6 : 6
 	},
-	move : function(name, from, to) {
-	},
-	sokobanMap : null,
-
-	getClass : function(elem) {
-	    return this.className[elem];
-	},
 	getVal : function(elem) {
 	    return this.sokobanVal[elem];
 	},
+	sokobanMap : null,
 	getLinePos : function(point) {
 	    return point.y * this.width + point.x;
 	},
 	nowJson : "",
 	boxs : null,
+	person : null,
 	lev : 0,
 	width : 0,
 	height : 0,
-	person : null,
+	containerWidth : 0,
+	boardWidth : 0,
+	length : 0,
 	event : {
 	    37 : function(that) {
 		that.person.css('background-position', '-150px 0');
@@ -83,8 +83,11 @@ jQuery(function() {
 		that.createMap(that.lev);
 	    }
 	},
-	init : function(gameBoard) {
+	init : function(gameBoard, container) {
 	    var that = this;
+
+	    that.containerWidth = container.width();
+	    that.length = that.gk.length;
 	    that.gameBoard = gameBoard;
 	    that.createMap(that.lev);
 	    that.bindPerson();
@@ -92,34 +95,31 @@ jQuery(function() {
 	createMap : function(lev) {
 	    var that = this;
 
-	    that.lev = lev % that.gk.length;
+	    that.lev = lev % that.length;
 	    that.gameBoard.empty();
-	    that.setTitle('第' + (lev + 1) + '关');
-	    that.nowJson = that.gk[that.lev];
-	    that.width = that.nowJson.width;
-	    that.height = that.nowJson.height;
+	    that.setTitle('第' + (that.lev + 1) + '关');
+	    var nowJson = that.gk[that.lev];
+	    that.width = nowJson.width;
+	    that.height = nowJson.height;
 	    that.sokobanMap = [];
-	    var boardWidth = that.width * that.baseWidth;
+	    that.boardWidth = that.width * that.baseWidth;
 
 	    that.gameBoard.css('margin-left',
-		    (jQuery(".container").width() - boardWidth) >> 1);
-	    that.gameBoard.css('width', boardWidth);
+		    (that.containerWidth - that.boardWidth) >> 1);
+	    that.gameBoard.css('width', that.boardWidth);
 
-	    jQuery.each(that.nowJson.map, jQuery.proxy(function(i, elem) {
-		if (i && i % that.width == 0) {
-		    that.gameBoard.append('<div class="clearfix"></div>');
-		}
+	    jQuery.each(nowJson.map, function(i, elem) {
 		that.sokobanMap.push(that.getVal(elem));
 		that.gameBoard.append('<div class="' + that.getClass(elem)
 			+ '"></div>');
-	    }, that));
-	    this.createBox();
-	    this.createPerson();
+	    });
+	    this.createBox(nowJson.box);
+	    this.createPerson(nowJson.person);
 	},
-	createBox : function() {
+	createBox : function(boxs) {
 	    var that = this;
 	    that.boxs = [];
-	    $.each(that.nowJson.box, $.proxy(function(i, elem) {
+	    $.each(boxs, function(i, elem) {
 		var box = $('<div class="'
 			+ that.getClass(that.sokobanName["sokoban-box"])
 			+ '"></div>');
@@ -127,35 +127,41 @@ jQuery(function() {
 		    x : elem.x,
 		    y : elem.y
 		};
+//		box.setPoint = function(newPoint){
+//		    point.x = newPoint.x;
+//		    point.y = newPoint.y;
+//		};
+//		box.getPoint
+		
 		that.sokobanMap[that.getLinePos(box.point)] |= that
 			.getVal(that.sokobanName["sokoban-box"]);
 		box.css('left', box.point.x * that.baseWidth);
 		box.css('top', box.point.y * that.baseWidth);
 		that.boxs.push(box);
 		that.gameBoard.append(box);
-	    }, that));
+	    });
 	},
-	createPerson : function() {
+	createPerson : function(person) {
 	    var that = this;
-	    var person = that.person = $('<div class="'
+	    that.person = $('<div class="'
 		    + that.getClass(that.sokobanName["sokoban-person"])
 		    + '"></div>');
-	    person.point = {
-		x : that.nowJson.person.x,
-		y : that.nowJson.person.y
+	    that.person.point = {
+		x : person.x,
+		y : person.y
 	    };
 
-	    that.sokobanMap[that.getLinePos(person.point)] |= that
+	    that.sokobanMap[that.getLinePos(that.person.point)] |= that
 		    .getVal(that.sokobanName["sokoban-person"]);
-	    person.css('left', person.point.x * that.baseWidth);
-	    person.css('top', person.point.y * that.baseWidth);
+	    that.person.css('left', that.person.point.x * that.baseWidth);
+	    that.person.css('top', that.person.point.y * that.baseWidth);
 
-	    that.gameBoard.append(person);
+	    that.gameBoard.append(that.person);
 	},
 	lock : false,
 	bindPerson : function() {
 	    var that = this;
-	    $(document).keydown($.proxy(function(ev) {
+	    $(document).keydown(function(ev) {
 		if (!that.lock) {
 		    that.lock = true;
 		    if (that.event[ev.which]) {
@@ -164,8 +170,7 @@ jQuery(function() {
 		    }
 		    that.lock = false;
 		}
-
-	    }, that));
+	    });
 	},
 	back : function(point, opt) {
 	    point.x -= opt.x;
@@ -326,6 +331,6 @@ jQuery(function() {
 		    height : 12
 		} ]
     };
-    SokobanGame.init($('#game-board'));
+    SokobanGame.init($('#game-board'), jQuery(".container"));
 
 });

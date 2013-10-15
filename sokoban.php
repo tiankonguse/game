@@ -6,7 +6,6 @@ require("./inc/common.php");
 <html lang="zh-cn">
 <head>
 <?php
-//manifest="appcache.manifest"
 $title = "tiankonguse's game";
 require BASE_INC . 'head.inc.php';
 ?>
@@ -24,10 +23,14 @@ require BASE_INC . 'head.inc.php';
             <div id="game-board" class="clearfix"></div>
         </div>
     </section>
+    <script src="<?php echo DOMAIN_JS;?>jquery.js"></script>
+    <script src="<?php echo MAIN_DOMAIN;?>js/sokoban.js"></script>
     <footer>
     <?php  require BASE_INC . 'footer.inc.php'; ?>
     </footer>
-    <script src="<?php echo DOMAIN_JS;?>jquery.js"></script>
-    <script src="<?php echo MAIN_DOMAIN;?>js/sokoban.js"></script>
+
+    <script>
+ 
+    </script>
 </body>
 </html>
